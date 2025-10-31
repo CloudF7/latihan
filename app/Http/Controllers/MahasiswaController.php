@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Mahasiswa;
+use App\Models\Matakuliah;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class MahasiswaController extends Controller
 {
@@ -12,7 +14,8 @@ class MahasiswaController extends Controller
      */
     public function index()
     {
-        return view('IndexMahasiswa', ['mahasiswas' => Mahasiswa::all()]);
+        $mahasiswas = Mahasiswa::all();
+        return view('IndexMahasiswa', compact('mahasiswas'));
     }
 
     /**
@@ -28,7 +31,15 @@ class MahasiswaController extends Controller
      */
     public function store(Request $request)
     {
-        $data = Mahasiswa::create([
+        $request->validate([
+            'name' => 'required',
+            'NIM' => 'required|unique:mahasiswas',
+            'tempat_lahir' => 'required',
+            'tanggal_lahir' => 'required|date',
+            'jurusan' => 'required',
+            'angkatan' => 'required|integer',
+        ]);
+        Mahasiswa::create([
             'name' => $request->name,
             'NIM' => $request->NIM,
             'tempat_lahir' => $request->tempat_lahir,
@@ -37,23 +48,22 @@ class MahasiswaController extends Controller
             'angkatan' => $request->angkatan
         ]);
 
-        return redirect()->route('mahasiswa.index');
+        return redirect()->route('mahasiswa.index')->with('success', 'Data mahasiswa berhasil ditambahkan!');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show($id)
-    {
-        
-    }
+    public function show($id) {}
 
     /**
      * Show the form for editing the specified resource.
      */
     public function edit($id)
     {
-        
+        // $mahasiswas = Mahasiswa::with('matakuliah')->findOrFail($id);
+        $mahasiswas = Mahasiswa::findorFail($id);
+        return view('editMahasiswa', compact('mahasiswas'));
     }
 
     /**
@@ -61,14 +71,31 @@ class MahasiswaController extends Controller
      */
     public function update(Request $request, $id)
     {
-        
-    }
+        $request->validate([
+            'name' => 'required',
+            'NIM' => [
+                'required',
+                Rule::unique('mahasiswas')->ignore($id),
+            ],
+            'tempat_lahir' => 'required',
+            'tanggal_lahir' => 'required|date',
+            'jurusan' => 'required',
+            'angkatan' => 'required|integer',
+        ]);
+        $mahasiswas = Mahasiswa::findOrFail($id);
+        $mahasiswas->update($request->all());
+        $mahasiswas->matakuliah()->sync($request->matakuliah_id ?? []);
 
+        return redirect()->route('mahasiswa.index')->with('success', 'Data Mahasiswa berhasil diperbaharui!');
+    }
     /**
      * Remove the specified resource from storage.
      */
     public function destroy($id)
     {
-        
+        $mahasiswas = Mahasiswa::findOrFail($id);
+        $mahasiswas->delete();
+
+        return redirect('mahasiswa')->with('success', 'Data Mahasiswa berhasil dihapus!');
     }
 }
